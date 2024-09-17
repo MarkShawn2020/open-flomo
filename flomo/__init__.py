@@ -1,4 +1,4 @@
-__version__ = '0.0.5-alpha'
+__version__ = '1.0.1-alpha'
 
 import platform
 import requests
@@ -8,6 +8,7 @@ import requests
 from typing import Any, List, Optional, Dict
 from datetime import datetime
 from bs4 import BeautifulSoup
+from html2text import html2text
 
 
 class Flomo:
@@ -76,7 +77,10 @@ class Parser:
             setattr(self, key, value)
 
     @property
-    def text(self):
+    def text(self, kind='markdown'):
+        if kind.lower() == 'markdown':
+            return html2text(self.content)
+
         soup = BeautifulSoup(self.content, "lxml")
         plain_text = soup.get_text(separator='\n', strip=True)
         return plain_text

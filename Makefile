@@ -1,4 +1,4 @@
-version=0.0.4a0
+version=1.0.1a0
 
 prepare:
 	pip install -r requirements.txt

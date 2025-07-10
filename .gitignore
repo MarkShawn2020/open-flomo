@@ -5,4 +5,7 @@ dist/
 flomo.egg-info/
 
 config.py
-*.ipynb
+*.ipynb.idea
+.DS_Store
+charles
+.idea

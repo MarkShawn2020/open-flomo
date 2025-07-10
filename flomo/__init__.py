@@ -26,7 +26,9 @@ class Flomo:
             "tz": "8:0",
             "timestamp": str(int(datetime.now().timestamp())),
             "api_key": "flomo_web",
-            "app_version": "2.0"
+            "app_version": "5.25.64",
+            "platform": "mac",
+            "webp": "1"
         }
         latest_slug = params.get("latest_slug", "")
         latest_updated_at = params.get("latest_updated_at", 0)

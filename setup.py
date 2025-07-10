@@ -61,12 +61,11 @@ setuptools.setup(
     url="https://github.com/Benature/flomo",
     packages=setuptools.find_packages(),
     install_requires=read_requirements(),
-    # entry_points={
-    #     'console_scripts': [
-    #         'autolatex=autolatex:excel2table',
-    #         'alt=autolatex:excel2table',
-    #     ],
-    # },
+    entry_points={
+        'console_scripts': [
+            'flomo=flomo.cli:main',
+        ],
+    },
     classifiers=(
         "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: MIT License",

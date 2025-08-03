@@ -1,104 +1,119 @@
 <a href="https://flomoapp.com/"><img src="https://raw.githubusercontent.com/Benature/flomo/main/flomo/media/logo-192x192.png" height="100" align="right"></a>
 
-# flomo 浮墨
+# flomo-cli
 
-[![PyPI](https://img.shields.io/pypi/v/flomo)](https://pypi.org/project/flomo/)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/flomo)
+[![PyPI version](https://img.shields.io/pypi/v/flomo)](https://pypi.org/project/flomo/)
+[![Python Version](https://img.shields.io/pypi/pyversions/flomo)](https://pypi.org/project/flomo/)
+[![License](https://img.shields.io/github/license/Benature/flomo)](https://github.com/Benature/flomo/blob/main/LICENCE)
+[![Downloads](https://img.shields.io/pypi/dm/flomo)](https://pypi.org/project/flomo/)
 [![GitHub stars](https://img.shields.io/github/stars/Benature/flomo)](https://github.com/Benature/flomo)
 
-一个非官方的 API python 库 + 命令行工具 👀
+**[中文](#中文) | [English](#english)**
 
-> *需要 python3.7+*  
-> 欢迎 Star 🌟、Fork 🍴、Issue 💬、PR. 一起让 flomo 用的更加得心应手
+<a name="中文"></a>
+## 简介
 
-最新版在 dev 分支
+flomo-cli 是一个非官方的 [flomo](https://flomoapp.com)（浮墨）Python API 库和命令行工具，让你能够通过代码或命令行管理你的备忘录。
 
-## 功能特性
+> 💡 **提示**: 本项目基于 [Benature/flomo](https://github.com/Benature/flomo) 二次开发，增强了 CLI 功能并优化了 API 设计。
 
-- 📚 **Python API 库**：方便集成到你的 Python 项目中
-- 🖥️ **命令行工具**：快速查看、搜索、导出备忘录
-- 📁 **多种导出格式**：JSON、Markdown、表格、极简格式
-- 🔍 **全文搜索**：快速找到需要的备忘录
-- 🎨 **灵活配置**：支持环境变量和配置文件
+## ✨ 核心特性
 
-## 安装
+- 🐍 **Python API** - 完整的 Python 接口，轻松集成到你的项目
+- 🖥️ **强大的 CLI** - 功能丰富的命令行工具，支持列表、搜索、导出等操作
+- 📊 **多格式导出** - 支持 JSON、Markdown、表格和极简格式
+- 🔍 **全文搜索** - 快速定位你需要的备忘录
+- ⚡ **高性能** - 批量获取，智能分页
+- 🎯 **灵活排序** - 支持按创建/更新时间升序或降序排列
 
-```shell
+## 📦 安装
+
+```bash
 pip install -U flomo
 ```
 
-## 获取 Token
+**系统要求**: Python 3.7+
+
+## 🚀 快速开始
+
+### 1. 获取 Token
 
 1. 在浏览器中登录 [flomo](https://flomoapp.com)
-2. 打开开发者工具（F12）
-3. 切换到 Network（网络）标签
-4. 刷新页面或进行任意操作
-5. 找到任意 API 请求（如 `/api/v1/memo/updated/`）
-6. 在请求头中找到 `Authorization` 字段，复制整个值（包含 `Bearer` 前缀）
+2. 打开开发者工具（F12）→ Network 标签
+3. 刷新页面，找到任意 API 请求（如 `/api/v1/memo/updated/`）
+4. 在请求头中复制 `Authorization` 字段的完整值（包含 `Bearer` 前缀）
 
-## 使用方法
+### 2. 配置认证
+
+```bash
+# 推荐：使用配置命令
+flomo config --token "Bearer your_token_here"
+
+# 或使用环境变量
+export FLOMO_AUTHORIZATION="Bearer your_token_here"
+```
+
+### 3. 开始使用
+
+```bash
+# 查看最近的备忘录
+flomo list -l 10 -f table
+
+# 搜索特定内容
+flomo search "Python" -f markdown
+
+# 导出所有备忘录
+flomo list -f markdown -o my_memos.md
+```
+
+## 📖 详细使用指南
 
 ### 命令行工具
 
-#### 1. 配置认证
+#### 列出备忘录
 
 ```bash
-# 方式1：使用配置命令（推荐）
-flomo config --token "Bearer xxxxxxxxxxx"
+# 基础用法
+flomo list                          # 默认 JSON 格式输出
+flomo list -f table                 # 表格格式显示
+flomo list -f markdown              # Markdown 格式
+flomo list -l 20                    # 限制显示 20 条
 
-# 方式2：使用环境变量
-export FLOMO_AUTHORIZATION="Bearer xxxxxxxxxxx"
+# 高级用法
+flomo list --order-by created_at --order-dir asc    # 按创建时间升序
+flomo list --order-by updated_at --order-dir desc   # 按更新时间降序
+flomo list --min -f markdown                         # 极简格式（适合 AI 处理）
+flomo list --no-meta                                 # 不包含元数据
+flomo list --url none                                # 不显示 URL
 
-# 查看当前配置
-flomo config --show
+# 导出到文件
+flomo list -f markdown -o backup.md -q               # 静默导出
 ```
 
-#### 2. 列出备忘录
+#### 搜索备忘录
 
 ```bash
-# 列出所有备忘录（JSON 格式）
-flomo list
+# 基础搜索
+flomo search "关键词"
+flomo search "Python" -l 10 -f table
 
-# 以表格形式展示
-flomo list -f table
-
-# 导出为 Markdown
-flomo list -f markdown -o my_memos.md
-
-# 只导出最近 10 条
-flomo list -l 10
-
-# 极简格式（适合喂给 AI）
-flomo list --min -f markdown
-
-# 按更新时间升序排列（旧到新）
-flomo list --order-by updated_at --order-dir asc
-
-# 按创建时间降序排列最新10条（默认行为）
-flomo list -l 10 --order-by created_at --order-dir desc
+# 高级搜索
+flomo search "工作" -f markdown --min | grep "2024"  # 结合 shell 命令
 ```
 
-#### 3. 搜索备忘录
+#### 参数说明
 
-```bash
-# 搜索包含关键词的备忘录
-flomo search "python"
-
-# 限制搜索结果数量
-flomo search "学习笔记" -l 5 -f table
-```
-
-#### 4. 高级选项
-
-- `-f, --format`: 输出格式（json/table/markdown）
-- `-l, --limit`: 限制返回数量
-- `-o, --output`: 导出到文件
-- `-q, --quiet`: 安静模式，不显示进度
-- `--url`: URL 显示方式（full/id/none）
-- `--no-meta`: 不包含元数据
-- `--min`: 极简输出模式
-- `--order-by`: 排序字段（created_at/updated_at，默认：created_at）
-- `--order-dir`: 排序方向（asc/desc，默认：desc）
+| 参数 | 说明 | 可选值 |
+|------|------|--------|
+| `-f, --format` | 输出格式 | `json`, `table`, `markdown` |
+| `-l, --limit` | 限制数量 | 正整数 |
+| `-o, --output` | 输出文件 | 文件路径 |
+| `-q, --quiet` | 静默模式 | - |
+| `--url` | URL 显示方式 | `full`, `id`, `none` |
+| `--no-meta` | 不含元数据 | - |
+| `--min` | 极简模式 | - |
+| `--order-by` | 排序字段 | `created_at`, `updated_at` |
+| `--order-dir` | 排序方向 | `asc`, `desc` |
 
 ### Python API
 
@@ -106,53 +121,150 @@ flomo search "学习笔记" -l 5 -f table
 from flomo import Flomo, Parser
 
 # 初始化客户端
-authorization = "Bearer xxxxxxxxxxx"
-flomo = Flomo(authorization)
+flomo = Flomo("Bearer your_token_here")
 
 # 获取所有备忘录
 memos = flomo.get_all_memos()
+print(f"Total memos: {len(memos)}")
 
-# 解析单条备忘录
-memo = Parser(memos[-1])
-print(memo.text)       # 纯文本内容
-print(memo.url)        # 备忘录链接
-print(memo.tags)       # 标签列表
-print(memo.created_at) # 创建时间
+# 解析备忘录
+for memo_data in memos[:5]:
+    memo = Parser(memo_data)
+    print(f"Content: {memo.text}")
+    print(f"URL: {memo.url}")
+    print(f"Tags: {memo.tags}")
+    print(f"Created: {memo.created_at}")
+    print("-" * 50)
 ```
 
-## 实际应用示例
+## 💡 实际应用场景
 
-### 1. 定期备份
+### 定期备份
 
 ```bash
-# 每天备份到带日期的文件
-flomo list -f markdown -o "flomo_backup_$(date +%Y%m%d).md"
+# 每日备份脚本
+#!/bin/bash
+DATE=$(date +%Y%m%d)
+flomo list -f markdown -o "backup/flomo_$DATE.md" -q
+echo "Backup completed: flomo_$DATE.md"
 ```
 
-### 2. 导出特定内容给 AI 分析
+### AI 分析准备
 
 ```bash
-# 搜索学习相关内容，极简格式输出
-flomo search "学习" --min -f markdown | pbcopy  # macOS
-flomo search "学习" --min -f markdown | xclip   # Linux
+# 导出最近的学习笔记给 AI 分析
+flomo search "学习" --min -f markdown | head -50 | pbcopy
 ```
 
-### 3. 生成周报素材
+### 周报生成
+
+```python
+from datetime import datetime, timedelta
+from flomo import Flomo, Parser
+
+flomo = Flomo("Bearer your_token")
+memos = flomo.get_all_memos()
+
+# 筛选本周的工作相关备忘录
+week_ago = datetime.now() - timedelta(days=7)
+work_memos = []
+
+for memo_data in memos:
+    memo = Parser(memo_data)
+    created = datetime.fromisoformat(memo.created_at.replace(' ', 'T'))
+    if created > week_ago and "工作" in memo.text:
+        work_memos.append(memo)
+
+# 生成周报
+print(f"本周工作备忘录 ({len(work_memos)} 条)")
+for memo in work_memos:
+    print(f"- {memo.created_at}: {memo.text[:50]}...")
+```
+
+## 🔧 开发指南
+
+### 本地开发
 
 ```bash
-# 导出最近 7 天的工作相关备忘录
-flomo search "工作" -f markdown | grep -A 2 "2024-01"
-```
-
-## Local Install 本地安装
-
-```shell
+# 克隆仓库
 git clone https://github.com/Benature/flomo.git
+cd flomo
+
+# 安装依赖
+make prepare
+
+# 本地安装
 make all
+
+# 运行测试
+python main_simple.py
 ```
 
+### 构建命令
 
-## Relative Project 相关项目
+```bash
+make clean      # 清理构建文件
+make uninstall  # 卸载包
+make all        # 完整构建流程
+make upload     # 上传到 PyPI
+```
 
-- workflow: [Benature/flomo workflow](https://github.com/Benature/flomo-workflow)
-- npm: [geekdada/flomo api helper](https://github.com/geekdada/flomo-api-helper)
+## 🤝 贡献指南
+
+欢迎贡献代码、报告问题或提出建议！
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+## 🔗 相关项目
+
+- [flomo-workflow](https://github.com/Benature/flomo-workflow) - Alfred Workflow
+- [flomo-api-helper](https://github.com/geekdada/flomo-api-helper) - Node.js 版本
+
+## 🙏 致谢
+
+### 特别感谢
+
+- **[Benature](https://github.com/Benature)** - 原项目作者，提供了优秀的基础代码和架构设计
+- **[flomo 团队](https://flomoapp.com)** - 感谢提供如此优秀的笔记产品，让思考更自由
+
+### 贡献者
+
+感谢所有为本项目做出贡献的开发者！
+
+## 📄 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENCE](LICENCE) 文件
+
+---
+
+<a name="english"></a>
+## Introduction
+
+flomo-cli is an unofficial Python API library and command-line tool for [flomo](https://flomoapp.com), enabling you to manage your memos through code or command line.
+
+> 💡 **Note**: This project is based on [Benature/flomo](https://github.com/Benature/flomo) with enhanced CLI features and optimized API design.
+
+## ✨ Key Features
+
+- 🐍 **Python API** - Complete Python interface for easy integration
+- 🖥️ **Powerful CLI** - Feature-rich command-line tool with list, search, and export
+- 📊 **Multi-format Export** - Support for JSON, Markdown, table, and minimal formats
+- 🔍 **Full-text Search** - Quickly locate the memos you need
+- ⚡ **High Performance** - Batch fetching with intelligent pagination
+- 🎯 **Flexible Sorting** - Sort by creation/update time in ascending or descending order
+
+## 📦 Installation
+
+```bash
+pip install -U flomo
+```
+
+**Requirements**: Python 3.7+
+
+---
+
+<p align="center">Made with ❤️ by the community</p>

@@ -82,25 +82,51 @@ class FlomoFormatter:
         return '\n'.join(lines)
     
     @staticmethod
-    def format_markdown(memos: List[Dict[str, Any]]) -> str:
+    def format_markdown(memos: List[Dict[str, Any]], url_mode: str = 'full', 
+                       include_meta: bool = True, minimal: bool = False) -> str:
         """Markdown格式输出"""
         if not memos:
             return "没有找到备忘录"
         
         lines = []
-        lines.append("# Flomo 备忘录")
-        lines.append("")
+        
+        if not minimal:
+            lines.append("# Flomo 备忘录")
+            lines.append("")
         
         for memo in memos:
-            lines.append(f"## {memo['index']}. {memo.get('created_at', '')}")
-            lines.append("")
-            lines.append(memo['content'])
-            lines.append(f"**链接**: {memo['url']}")
-            if memo.get('tags'):
-                lines.append(f"**标签**: {', '.join(memo['tags'])}")
-            lines.append("")
-            lines.append("---")
-            lines.append("")
+            if minimal:
+                # 最小化模式：一行一条memo，格式为 "序号|日期|内容"
+                date = memo.get('created_at', '').split(' ')[0]  # 只要日期部分
+                content = memo['content'].strip().replace('\n', ' ')  # 压缩换行为空格
+                lines.append(f"{memo['index']}|{date}|{content}")
+            else:
+                # 标题处理
+                if include_meta:
+                    # 包含元数据
+                    lines.append(f"## {memo['index']}. {memo.get('created_at', '')}")
+                else:
+                    # 不包含元数据
+                    lines.append(f"## {memo['index']}")
+                
+                lines.append("")
+                lines.append(memo['content'].strip())
+                
+                # URL处理
+                if url_mode == 'full':
+                    lines.append(f"**链接**: {memo['url']}")
+                elif url_mode == 'id':
+                    lines.append(f"**ID**: {memo['slug']}")
+                # url_mode == 'none' 时不添加任何URL信息
+                
+                # 标签处理
+                if memo.get('tags'):
+                    lines.append(f"**标签**: {', '.join(memo['tags'])}")
+                
+                # 分隔符
+                lines.append("")
+                lines.append("---")
+                lines.append("")
         
         return '\n'.join(lines)
 
@@ -128,7 +154,8 @@ class FlomoCLI:
         
         return Flomo(token)
     
-    def _parse_memos(self, memos: List[Dict], limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    def _parse_memos(self, memos: List[Dict], limit: Optional[int] = None, 
+                    include_meta: bool = True, minimal: bool = False) -> List[Dict[str, Any]]:
         """解析备忘录数据"""
         if limit:
             memos = memos[:limit]
@@ -140,11 +167,20 @@ class FlomoCLI:
                 "index": i + 1,
                 "content": memo.text,
                 "url": memo.url,
-                "tags": getattr(memo, 'tags', []),
-                "created_at": getattr(memo, 'created_at', ''),
-                "updated_at": getattr(memo, 'updated_at', ''),
                 "slug": getattr(memo, 'slug', '')
             }
+            
+            # 最小化模式总是包含日期（用于一行格式）
+            if minimal or include_meta:
+                memo_info["created_at"] = getattr(memo, 'created_at', '')
+            
+            # 根据参数决定是否包含额外信息
+            if not minimal:
+                memo_info["tags"] = getattr(memo, 'tags', [])
+                
+                if include_meta:
+                    memo_info["updated_at"] = getattr(memo, 'updated_at', '')
+            
             parsed_memos.append(memo_info)
         
         return parsed_memos
@@ -166,7 +202,20 @@ class FlomoCLI:
                 print("没有找到备忘录")
                 return
             
-            parsed_memos = self._parse_memos(memos, args.limit)
+            # 根据参数对备忘录进行排序
+            order_by = args.order_by if hasattr(args, 'order_by') else 'created_at'
+            order_dir = args.order_dir if hasattr(args, 'order_dir') else 'desc'
+            
+            # 使用排序键函数，处理可能缺失的字段
+            def get_sort_key(memo):
+                value = memo.get(order_by, '')
+                # 如果是时间字段且值存在，返回时间值；否则返回空字符串
+                return value if value else ''
+            
+            memos.sort(key=get_sort_key, reverse=(order_dir == 'desc'))
+            
+            parsed_memos = self._parse_memos(memos, args.limit, 
+                                           not args.no_meta, args.min)
             
             # 格式化输出
             if args.format == 'json':
@@ -174,11 +223,25 @@ class FlomoCLI:
             elif args.format == 'table':
                 output = self.formatter.format_table(parsed_memos)
             elif args.format == 'markdown':
-                output = self.formatter.format_markdown(parsed_memos)
+                output = self.formatter.format_markdown(parsed_memos, args.url, 
+                                                      not args.no_meta, args.min)
             else:
                 output = self.formatter.format_json(parsed_memos, not args.compact)
             
-            print(output)
+            # 输出到文件或标准输出
+            if args.output:
+                output_path = Path(args.output)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                with open(output_path, 'w', encoding='utf-8') as f:
+                    f.write(output)
+                
+                if not args.quiet:
+                    print(f"已导出到文件: {output_path.absolute()}", file=sys.stderr)
+                    print(f"导出格式: {args.format}", file=sys.stderr)
+                    print(f"备忘录数量: {len(parsed_memos)}", file=sys.stderr)
+            else:
+                print(output)
             
         except Exception as e:
             print(f"错误: {e}", file=sys.stderr)
@@ -258,6 +321,15 @@ class FlomoCLI:
                                default='json', help='输出格式 (默认: json)')
         list_parser.add_argument('-c', '--compact', action='store_true', help='紧凑的JSON输出')
         list_parser.add_argument('-q', '--quiet', action='store_true', help='安静模式，不显示进度信息')
+        list_parser.add_argument('-o', '--output', help='导出到文件 (指定文件路径)')
+        list_parser.add_argument('--url', choices=['full', 'id', 'none'], default='full', 
+                               help='URL展现形式: full=完整URL, id=仅显示ID, none=不显示 (默认: full)')
+        list_parser.add_argument('--no-meta', action='store_true', help='不包含元数据 (创建时间、更新时间等)')
+        list_parser.add_argument('--min', action='store_true', help='最小化输出 (仅内容和基本信息, 适合喂给大模型)')
+        list_parser.add_argument('--order-by', choices=['created_at', 'updated_at'], default='created_at',
+                               help='排序字段 (默认: created_at)')
+        list_parser.add_argument('--order-dir', choices=['asc', 'desc'], default='desc',
+                               help='排序方向: asc=升序(旧到新), desc=降序(新到旧) (默认: desc)')
         
         # search 命令
         search_parser = subparsers.add_parser('search', help='搜索备忘录')

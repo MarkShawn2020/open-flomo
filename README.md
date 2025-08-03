@@ -2,23 +2,23 @@
 
 # flomo-cli
 
-[![PyPI version](https://img.shields.io/pypi/v/flomo)](https://pypi.org/project/flomo/)
-[![Python Version](https://img.shields.io/pypi/pyversions/flomo)](https://pypi.org/project/flomo/)
+[![Python Version](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/github/license/Benature/flomo)](https://github.com/Benature/flomo/blob/main/LICENCE)
-[![Downloads](https://img.shields.io/pypi/dm/flomo)](https://pypi.org/project/flomo/)
 [![GitHub stars](https://img.shields.io/github/stars/Benature/flomo)](https://github.com/Benature/flomo)
+[![Fork](https://img.shields.io/badge/fork-friendly-brightgreen)](https://github.com/Benature/flomo/fork)
 
 **[中文](#中文) | [English](#english)**
 
 <a name="中文"></a>
 ## 简介
 
-flomo-cli 是一个非官方的 [flomo](https://flomoapp.com)（浮墨）Python API 库和命令行工具，让你能够通过代码或命令行管理你的备忘录。
+flomo-cli 是一个非官方的 [flomo](https://flomoapp.com)（浮墨）Python API 库和命令行工具，让你能够通过代码或命令行管理你的备忘录。**特别适合将你的知识库导出给 AI 大模型进行深度分析。**
 
 > 💡 **提示**: 本项目基于 [Benature/flomo](https://github.com/Benature/flomo) 二次开发，增强了 CLI 功能并优化了 API 设计。
 
 ## ✨ 核心特性
 
+- 🤖 **AI 分析友好** - 专为导出数据给大模型分析而优化，支持极简格式输出
 - 🐍 **Python API** - 完整的 Python 接口，轻松集成到你的项目
 - 🖥️ **强大的 CLI** - 功能丰富的命令行工具，支持列表、搜索、导出等操作
 - 📊 **多格式导出** - 支持 JSON、Markdown、表格和极简格式
@@ -29,7 +29,10 @@ flomo-cli 是一个非官方的 [flomo](https://flomoapp.com)（浮墨）Python 
 ## 📦 安装
 
 ```bash
-pip install -U flomo
+# 从源码安装（推荐）
+git clone https://github.com/Benature/flomo.git
+cd flomo
+make all
 ```
 
 **系统要求**: Python 3.7+
@@ -139,6 +142,55 @@ for memo_data in memos[:5]:
 
 ## 💡 实际应用场景
 
+### 🤖 AI/大模型分析（推荐）
+
+将你的 flomo 知识库导出并喂给 AI 进行深度分析，发现隐藏的思维模式和知识关联：
+
+```bash
+# 方案1：导出所有备忘录给 AI 分析（极简格式，节省 token）
+flomo list --min -f markdown -o my_knowledge.md
+# 然后将 my_knowledge.md 内容复制给 ChatGPT/Claude 等大模型
+
+# 方案2：导出特定主题进行专项分析
+flomo search "学习方法" --min -f markdown | pbcopy  # macOS
+flomo search "投资思考" --min -f markdown | xclip   # Linux
+
+# 方案3：导出最近的思考进行回顾分析
+flomo list -l 100 --min -f markdown --order-by created_at --order-dir desc
+```
+
+**AI 分析提示词示例**：
+```
+请分析我的这些 flomo 笔记，帮我：
+1. 总结主要的思考主题和关注领域
+2. 发现潜在的思维模式和认知偏好
+3. 找出重复出现的概念和想法
+4. 提供改进建议和深入思考的方向
+5. 生成一份个人知识图谱
+
+[粘贴导出的 flomo 内容]
+```
+
+**高级用法 - Python 脚本自动化分析**：
+```python
+from flomo import Flomo, Parser
+import openai  # 或其他 AI SDK
+
+# 获取 flomo 数据
+flomo = Flomo("Bearer your_token")
+memos = flomo.get_all_memos()
+
+# 准备数据给 AI
+knowledge_base = []
+for memo_data in memos[:500]:  # 最近 500 条
+    memo = Parser(memo_data)
+    knowledge_base.append(f"{memo.created_at}: {memo.text}")
+
+# 调用 AI API 进行分析
+prompt = f"分析以下知识库内容：\n\n" + "\n".join(knowledge_base)
+# ... AI API 调用代码
+```
+
 ### 定期备份
 
 ```bash
@@ -147,13 +199,6 @@ for memo_data in memos[:5]:
 DATE=$(date +%Y%m%d)
 flomo list -f markdown -o "backup/flomo_$DATE.md" -q
 echo "Backup completed: flomo_$DATE.md"
-```
-
-### AI 分析准备
-
-```bash
-# 导出最近的学习笔记给 AI 分析
-flomo search "学习" --min -f markdown | head -50 | pbcopy
 ```
 
 ### 周报生成
@@ -244,12 +289,13 @@ make upload     # 上传到 PyPI
 <a name="english"></a>
 ## Introduction
 
-flomo-cli is an unofficial Python API library and command-line tool for [flomo](https://flomoapp.com), enabling you to manage your memos through code or command line.
+flomo-cli is an unofficial Python API library and command-line tool for [flomo](https://flomoapp.com), enabling you to manage your memos through code or command line. **Especially suitable for exporting your knowledge base to AI/LLMs for deep analysis.**
 
 > 💡 **Note**: This project is based on [Benature/flomo](https://github.com/Benature/flomo) with enhanced CLI features and optimized API design.
 
 ## ✨ Key Features
 
+- 🤖 **AI-Friendly Export** - Optimized for feeding data to LLMs with minimal format support
 - 🐍 **Python API** - Complete Python interface for easy integration
 - 🖥️ **Powerful CLI** - Feature-rich command-line tool with list, search, and export
 - 📊 **Multi-format Export** - Support for JSON, Markdown, table, and minimal formats
@@ -260,7 +306,10 @@ flomo-cli is an unofficial Python API library and command-line tool for [flomo](
 ## 📦 Installation
 
 ```bash
-pip install -U flomo
+# Install from source (recommended)
+git clone https://github.com/Benature/flomo.git
+cd flomo
+make all
 ```
 
 **Requirements**: Python 3.7+

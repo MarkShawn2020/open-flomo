@@ -369,11 +369,7 @@ body {
 }
 
 .memo-content {
-  line-height: 1.6;
-  white-space: pre-wrap;
-  word-wrap: break-word;
   margin-bottom: var(--spacing-s);
-  color: var(--color-text-main);
 }
 
 .memo-tags {

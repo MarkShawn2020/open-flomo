@@ -3,6 +3,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { format } from "date-fns";
+import { MemoContent } from "./MemoContent";
 import "./ExportPreview.css";
 
 interface Memo {
@@ -205,7 +206,9 @@ export function ExportPreview({ memos, onClose }: ExportPreviewProps) {
         <span className="memo-index">#{index + 1}</span>
         <span className="memo-date">{formatDate(memo.created_at)}</span>
       </div>
-      <div className="memo-content">{memo.content}</div>
+      <div className="memo-content">
+        <MemoContent content={memo.content} />
+      </div>
       {memo.tags.length > 0 && (
         <div className="memo-tags">
           {memo.tags.map((tag, i) => (

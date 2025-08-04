@@ -4,6 +4,7 @@ import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { SyncModal } from "./SyncModal";
 import { ExportPreview } from "./ExportPreview";
+import { MemoContent } from "./MemoContent";
 import "./App.css";
 
 interface Memo {
@@ -242,7 +243,9 @@ function App() {
         <span className="memo-index">#{index + 1}</span>
         <span className="memo-date">{formatDate(memo.created_at)}</span>
       </div>
-      <div className="memo-content">{memo.content}</div>
+      <div className="memo-content">
+        <MemoContent content={memo.content} />
+      </div>
       {memo.tags.length > 0 && (
         <div className="memo-tags">
           {memo.tags.map((tag, i) => (

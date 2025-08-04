@@ -28,11 +28,11 @@ This document describes how to create a new release for Flomo Garden with automa
    git commit -m "chore: bump version to v0.2.0"
    ```
 
-3. **Create and push tag**:
+3. **Create and push tag** (注意：tag必须以 `flomo-ui-v` 开头):
    ```bash
-   git tag v0.2.0
+   git tag flomo-ui-v0.2.0
    git push origin main
-   git push origin v0.2.0
+   git push origin flomo-ui-v0.2.0
    ```
 
 4. **GitHub Actions will automatically**:

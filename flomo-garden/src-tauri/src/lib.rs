@@ -420,6 +420,90 @@ fn format_memos_table(memos: Vec<Memo>) -> String {
     output
 }
 
+#[tauri::command]
+fn format_memos_json_with_options(
+    memos: Vec<Memo>, 
+    compact: bool, 
+    include_metadata: bool
+) -> String {
+    let processed_memos: Vec<serde_json::Value> = memos.iter().enumerate().map(|(index, memo)| {
+        let mut obj = serde_json::json!({
+            "index": index + 1,
+            "content": memo.content,
+            "url": memo.url,
+            "slug": memo.slug,
+        });
+        
+        if include_metadata {
+            obj["created_at"] = serde_json::json!(memo.created_at);
+            obj["updated_at"] = serde_json::json!(memo.updated_at);
+            obj["tags"] = serde_json::json!(memo.tags);
+        }
+        
+        obj
+    }).collect();
+    
+    if compact {
+        serde_json::to_string(&processed_memos).unwrap_or_default()
+    } else {
+        serde_json::to_string_pretty(&processed_memos).unwrap_or_default()
+    }
+}
+
+#[tauri::command]
+fn format_memos_markdown_with_options(
+    memos: Vec<Memo>, 
+    url_mode: String, 
+    include_metadata: bool, 
+    minimal: bool
+) -> String {
+    let mut output = String::new();
+    
+    if !minimal {
+        output.push_str("# Flomo 备忘录\n\n");
+    }
+    
+    for (index, memo) in memos.iter().enumerate() {
+        if minimal {
+            // Minimal mode: one line per memo
+            let date = memo.created_at.split(' ').next().unwrap_or(&memo.created_at);
+            let content = memo.content.replace('\n', " ");
+            output.push_str(&format!("{}|{}|{}\n", index + 1, date, content));
+        } else {
+            // Normal mode
+            if include_metadata {
+                output.push_str(&format!("## {}. {}\n\n", index + 1, memo.created_at));
+            } else {
+                output.push_str(&format!("## {}\n\n", index + 1));
+            }
+            
+            output.push_str(&format!("{}\n", memo.content.trim()));
+            
+            // URL handling
+            match url_mode.as_str() {
+                "full" => {
+                    if let Some(url) = &memo.url {
+                        output.push_str(&format!("**链接**: {}\n", url));
+                    }
+                },
+                "id" => {
+                    output.push_str(&format!("**ID**: {}\n", memo.slug));
+                },
+                _ => {} // "none" or any other value
+            }
+            
+            // Tags
+            if !memo.tags.is_empty() {
+                output.push_str(&format!("**标签**: {}\n", memo.tags.join(", ")));
+            }
+            
+            output.push_str("\n---\n\n");
+        }
+    }
+    
+    output
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -477,7 +561,9 @@ pub fn run() {
             load_config,
             format_memos_json,
             format_memos_markdown,
-            format_memos_table
+            format_memos_table,
+            format_memos_json_with_options,
+            format_memos_markdown_with_options
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

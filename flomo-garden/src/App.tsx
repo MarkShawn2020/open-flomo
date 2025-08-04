@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { SyncModal } from "./SyncModal";
+import { ExportPreview } from "./ExportPreview";
 import "./App.css";
 
 interface Memo {
@@ -17,7 +16,6 @@ interface Memo {
 }
 
 
-type ExportFormat = "json" | "markdown" | "table";
 type ViewMode = "list" | "search" | "settings";
 type OrderBy = "created_at" | "updated_at";
 type OrderDir = "asc" | "desc";
@@ -27,10 +25,11 @@ function App() {
   const [token, setToken] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("markdown");
   const [orderBy, setOrderBy] = useState<OrderBy>("created_at");
   const [orderDir, setOrderDir] = useState<OrderDir>("desc");
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const [exportMemos, setExportMemos] = useState<Memo[]>([]);
   const [hasLocalData, setHasLocalData] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -202,7 +201,7 @@ function App() {
     }
   }, [memosData, searchData, viewMode]);
 
-  const exportMemos = async () => {
+  const showExportDialog = async () => {
     // For export, fetch all memos from local database
     try {
       if (!hasLocalData) {
@@ -211,8 +210,8 @@ function App() {
       }
       
       const allMemos = await invoke<Memo[]>("get_memos_from_db", {
-        orderBy,
-        orderDir,
+        orderBy: "created_at",
+        orderDir: "desc",
         offset: 0,
         limit: 999999, // Get all
       });
@@ -222,47 +221,10 @@ function App() {
         return;
       }
 
-      let content: string;
-      let defaultName: string;
-      let filters: { name: string; extensions: string[] }[];
-
-      switch (selectedFormat) {
-        case "json":
-          content = await invoke<string>("format_memos_json", { 
-            memos: allMemos 
-          });
-          defaultName = `flomo_export_${format(new Date(), "yyyyMMdd_HHmmss")}.json`;
-          filters = [{ name: "JSON", extensions: ["json"] }];
-          break;
-        case "markdown":
-          content = await invoke<string>("format_memos_markdown", { 
-            memos: allMemos 
-          });
-          defaultName = `flomo_export_${format(new Date(), "yyyyMMdd_HHmmss")}.md`;
-          filters = [{ name: "Markdown", extensions: ["md"] }];
-          break;
-        case "table":
-          content = await invoke<string>("format_memos_table", { 
-            memos: allMemos 
-          });
-          defaultName = `flomo_export_${format(new Date(), "yyyyMMdd_HHmmss")}.txt`;
-          filters = [{ name: "Text", extensions: ["txt"] }];
-          break;
-        default:
-          return;
-      }
-
-      const path = await save({
-        defaultPath: defaultName,
-        filters,
-      });
-
-      if (path) {
-        await writeTextFile(path, content);
-        alert(`Exported ${allMemos.length} memos to ${path}`);
-      }
+      setExportMemos(allMemos);
+      setShowExportPreview(true);
     } catch (err) {
-      setError(`Export failed: ${err}`);
+      setError(`Failed to load memos: ${err}`);
     }
   };
 
@@ -413,18 +375,9 @@ function App() {
                     </select>
                   </div>
                   <div className="export-controls">
-                    <select
-                      value={selectedFormat}
-                      onChange={(e) => setSelectedFormat(e.target.value as ExportFormat)}
-                      className="format-select"
-                    >
-                      <option value="markdown">Markdown</option>
-                      <option value="json">JSON</option>
-                      <option value="table">Table</option>
-                    </select>
                     <button 
-                      onClick={exportMemos}
-                      disabled={getAllMemos().length === 0}
+                      onClick={showExportDialog}
+                      disabled={!hasLocalData}
                       className="export-button"
                     >
                       Export All
@@ -583,6 +536,13 @@ function App() {
         token={token}
         onSyncComplete={handleSyncComplete}
       />
+      
+      {showExportPreview && exportMemos.length > 0 && (
+        <ExportPreview
+          memos={exportMemos}
+          onClose={() => setShowExportPreview(false)}
+        />
+      )}
     </div>
   );
 }

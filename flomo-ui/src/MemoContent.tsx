@@ -1,5 +1,5 @@
 import React from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import rehypeHighlight from 'rehype-highlight';
@@ -9,6 +9,39 @@ interface MemoContentProps {
 }
 
 export const MemoContent: React.FC<MemoContentProps> = ({ content }) => {
+  const components: Partial<Components> = {
+    // Custom link renderer to open external links in new tab
+    a: ({ node, ...props }) => (
+      <a {...props} target="_blank" rel="noopener noreferrer" />
+    ),
+    // Custom code block renderer
+    code: ({ inline, className, children, ...props }: any) => {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <div className="relative">
+          <div className="absolute top-0 right-0 px-2 py-1 text-xs text-gray-400 bg-gray-800 rounded-bl">{match[1]}</div>
+          <code className={className} {...props}>
+            {children}
+          </code>
+        </div>
+      ) : (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
+    // Custom table renderer
+    table: ({ node, ...props }) => (
+      <div className="overflow-x-auto">
+        <table {...props} />
+      </div>
+    ),
+    // Custom image renderer
+    img: ({ node, ...props }) => (
+      <img loading="lazy" {...props} />
+    ),
+  };
+
   return (
     <div className="prose prose-sm max-w-none 
       prose-headings:text-foreground 
@@ -25,38 +58,7 @@ export const MemoContent: React.FC<MemoContentProps> = ({ content }) => {
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[rehypeHighlight]}
-        components={{
-          // Custom link renderer to open external links in new tab
-          a: ({ node, ...props }) => (
-            <a {...props} target="_blank" rel="noopener noreferrer" />
-          ),
-          // Custom code block renderer
-          code: ({ node, inline, className, children, ...props }) => {
-            const match = /language-(\w+)/.exec(className || '');
-            return !inline && match ? (
-              <div className="relative">
-                <div className="absolute top-0 right-0 px-2 py-1 text-xs text-gray-400 bg-gray-800 rounded-bl">{match[1]}</div>
-                <code className={className} {...props}>
-                  {children}
-                </code>
-              </div>
-            ) : (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          },
-          // Custom table renderer
-          table: ({ node, ...props }) => (
-            <div className="overflow-x-auto">
-              <table {...props} />
-            </div>
-          ),
-          // Custom image renderer
-          img: ({ node, ...props }) => (
-            <img loading="lazy" {...props} />
-          ),
-        }}
+        components={components}
       >
         {content}
       </ReactMarkdown>

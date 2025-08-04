@@ -23,8 +23,6 @@ flomo-cli 是一个非官方的 Flomo Python API 库和命令行工具，让你�
 
 ```bash
 # 从源码安装（推荐）
-git clone https://github.com/Benature/flomo.git
-cd flomo/flomo-cli
 pip install -r ../requirements.txt
 python ../setup.py install
 ```
@@ -225,10 +223,6 @@ for memo in work_memos:
 ### 本地开发
 
 ```bash
-# 克隆仓库
-git clone https://github.com/Benature/flomo.git
-cd flomo
-
 # 安装依赖
 make prepare
 
@@ -248,47 +242,11 @@ make all        # 完整构建流程
 make upload     # 上传到 PyPI
 ```
 
-## 🔗 相关项目
-
-- [flomo-workflow](https://github.com/Benature/flomo-workflow) - Alfred Workflow
-- [flomo-api-helper](https://github.com/geekdada/flomo-api-helper) - Node.js 版本
-
-## 🙏 致谢
-
-- **[Benature](https://github.com/Benature)** - 原项目作者，提供了优秀的基础代码和架构设计
-- **[flomo 团队](https://flomoapp.com)** - 感谢提供如此优秀的笔记产品
-
 ## 📄 许可证
 
 本项目采用 MIT 许可证 - 详见 [LICENCE](../LICENCE) 文件
 
----
+## 🙏 致谢
 
-<a name="english"></a>
-## Introduction
-
-flomo-cli is an unofficial Python API library and command-line tool for [flomo](https://flomoapp.com), enabling you to manage your memos through code or command line. **Especially suitable for exporting your knowledge base to AI/LLMs for deep analysis.**
-
-## ✨ Key Features
-
-- 🤖 **AI-Friendly Export** - Optimized for feeding data to LLMs with minimal format support
-- 🐍 **Python API** - Complete Python interface for easy integration
-- 🖥️ **Powerful CLI** - Feature-rich command-line tool with list, search, and export
-- 📊 **Multi-format Export** - Support for JSON, Markdown, table, and minimal formats
-- 🔍 **Full-text Search** - Quickly locate the memos you need
-- ⚡ **High Performance** - Batch fetching with intelligent pagination
-- 🎯 **Flexible Sorting** - Sort by creation/update time in ascending or descending order
-
-## 📦 Installation
-
-```bash
-# Install from source (recommended)
-git clone https://github.com/Benature/flomo.git
-cd flomo/flomo-cli
-pip install -r ../requirements.txt
-python ../setup.py install
-```
-
-**Requirements**: Python 3.7+
-
-See the Chinese documentation above for detailed usage instructions.
+- **[flomo 团队](https://flomoapp.com)** - 感谢提供如此优秀的笔记产品
+- **[Benature](https://github.com/Benature)** - 原项目作者，提供了优秀的基础代码和架构设计

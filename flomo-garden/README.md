@@ -12,6 +12,8 @@ A beautiful desktop application for managing your Flomo (浮墨) notes, built wi
 - 🎨 Clean and modern UI
 - ♾️ Infinite scrolling with React Query for optimal performance
 - ⚡ Fast pagination - loads memos as you scroll
+- 🔄 Sort by creation date or update date (newest/oldest first)
+- 📊 Loads 200 memos initially for accurate sorting
 
 ## Installation
 
@@ -68,8 +70,8 @@ The built application will be in `src-tauri/target/release/bundle/`.
 
 ### Features
 
-- **Memos Tab**: View all your memos, fetch latest updates, and export
-- **Search Tab**: Search through your memos by content or tags
+- **Memos Tab**: View your memos with sorting options, infinite scroll, and export functionality
+- **Search Tab**: Search through your memos by content or tags with sorting options
 - **Settings Tab**: Configure your authentication token
 
 ### Export Formats

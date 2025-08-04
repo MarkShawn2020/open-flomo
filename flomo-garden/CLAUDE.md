@@ -70,3 +70,5 @@ pnpm build
 - Tauri plugin `tauri-plugin-opener` is included for opening external links
 - API authentication uses MD5 hashing for signature generation (matching Flomo's requirements)
 - Debug logging is enabled in development mode - check console output for API troubleshooting
+- The Flomo API endpoint `/api/v1/memo/updated/` returns memos ordered by update time, not creation time
+- Frontend sorting is applied after data is loaded to allow sorting by creation date

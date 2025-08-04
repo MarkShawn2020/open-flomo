@@ -158,6 +158,40 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* Sort Controls */
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sort-controls label {
+  font-size: 14px;
+  color: #586069;
+  font-weight: 500;
+}
+
+.sort-select {
+  padding: 8px 12px;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sort-select:hover {
+  border-color: #d1d5da;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: #0969da;
+  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
 }
 
 .fetch-button {
@@ -221,7 +255,11 @@ body {
 }
 
 .search-bar {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
+}
+
+.search-sort {
+  margin-bottom: 16px;
 }
 
 .search-input {
@@ -244,6 +282,11 @@ body {
   margin-bottom: 16px;
   font-size: 14px;
   color: #586069;
+}
+
+.memo-stats-note {
+  font-style: italic;
+  opacity: 0.8;
 }
 
 /* Memos Container */
@@ -347,4 +390,57 @@ body {
   color: #586069;
   font-size: 14px;
   opacity: 0.6;
+}
+
+/* Sync Button in Header */
+.sync-button-header {
+  background-color: #0969da;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.sync-button-header:hover {
+  background-color: #0860ca;
+}
+
+/* Sync Prompt */
+.sync-prompt {
+  background-color: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.sync-prompt p {
+  margin: 0 0 16px 0;
+  color: #586069;
+  font-size: 16px;
+}
+
+.sync-button-inline {
+  background-color: #0969da;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.sync-button-inline:hover {
+  background-color: #0860ca;
 }

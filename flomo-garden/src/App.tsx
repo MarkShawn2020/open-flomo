@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { SyncModal } from "./SyncModal";
 import "./App.css";
 
 interface Memo {
@@ -15,15 +16,11 @@ interface Memo {
   url?: string;
 }
 
-interface PagedResponse {
-  memos: Memo[];
-  has_more: boolean;
-  next_slug?: string;
-  next_updated_at?: number;
-}
 
 type ExportFormat = "json" | "markdown" | "table";
 type ViewMode = "list" | "search" | "settings";
+type OrderBy = "created_at" | "updated_at";
+type OrderDir = "asc" | "desc";
 
 function App() {
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +28,18 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [selectedFormat, setSelectedFormat] = useState<ExportFormat>("markdown");
+  const [orderBy, setOrderBy] = useState<OrderBy>("created_at");
+  const [orderDir, setOrderDir] = useState<OrderDir>("desc");
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [hasLocalData, setHasLocalData] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const queryClient = useQueryClient();
 
-  // Load saved token on mount
+  // Load saved token and check for local data on mount
   useEffect(() => {
     loadToken();
+    checkLocalData();
   }, []);
 
   const loadToken = async () => {
@@ -60,6 +63,15 @@ function App() {
     }
   };
 
+  const checkLocalData = async () => {
+    try {
+      const status = await invoke<any>("get_sync_status");
+      setHasLocalData(status.total_memos > 0);
+    } catch (err) {
+      console.error("Failed to check local data:", err);
+    }
+  };
+
   // Infinite query for memos list
   const {
     data: memosData,
@@ -71,27 +83,40 @@ function App() {
     error: memosError,
     refetch: refetchMemos,
   } = useInfiniteQuery({
-    queryKey: ["memos", token],
-    queryFn: async ({ pageParam }) => {
+    queryKey: ["memos", token, orderBy, orderDir, hasLocalData],
+    queryFn: async ({ pageParam = 0 }) => {
       if (!token) throw new Error("No token configured");
       
-      const response = await invoke<PagedResponse>("get_memos_page", {
-        token,
-        latestSlug: pageParam?.slug || null,
-        latestUpdatedAt: pageParam?.updatedAt || null,
+      if (!hasLocalData) {
+        // If no local data, show empty and prompt for sync
+        return { memos: [], has_more: false };
+      }
+      
+      const limit = 50;
+      const memos = await invoke<Memo[]>("get_memos_from_db", {
+        orderBy,
+        orderDir,
+        offset: pageParam,
+        limit: limit + 1, // Get one extra to check if there's more
       });
       
-      return response;
-    },
-    initialPageParam: null as { slug: string; updatedAt: number } | null,
-    getNextPageParam: (lastPage) => {
-      if (!lastPage.has_more || !lastPage.next_slug) return undefined;
+      const hasMore = memos.length > limit;
+      if (hasMore) {
+        memos.pop(); // Remove the extra item
+      }
+      
       return {
-        slug: lastPage.next_slug,
-        updatedAt: lastPage.next_updated_at || 0,
+        memos,
+        has_more: hasMore,
+        offset: pageParam,
       };
     },
-    enabled: viewMode === "list" && !!token,
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: any) => {
+      if (!lastPage.has_more) return undefined;
+      return lastPage.offset + 50;
+    },
+    enabled: viewMode === "list" && !!token && hasLocalData,
   });
 
   // Infinite query for search
@@ -104,25 +129,37 @@ function App() {
     isError: isErrorSearch,
     error: searchError,
   } = useInfiniteQuery({
-    queryKey: ["search", token, searchQuery],
+    queryKey: ["search", token, searchQuery, orderBy, orderDir, hasLocalData],
     queryFn: async ({ pageParam = 0 }) => {
       if (!token) throw new Error("No token configured");
+      if (!hasLocalData) return { memos: [], has_more: false };
       
-      const response = await invoke<PagedResponse>("search_memos_page", {
-        token,
+      const limit = 50;
+      const memos = await invoke<Memo[]>("search_memos_from_db", {
         query: searchQuery,
+        orderBy,
+        orderDir,
         offset: pageParam,
-        limit: 50,
+        limit: limit + 1,
       });
       
-      return { ...response, offset: pageParam };
+      const hasMore = memos.length > limit;
+      if (hasMore) {
+        memos.pop();
+      }
+      
+      return {
+        memos,
+        has_more: hasMore,
+        offset: pageParam,
+      };
     },
     initialPageParam: 0,
-    getNextPageParam: (lastPage) => {
+    getNextPageParam: (lastPage: any) => {
       if (!lastPage.has_more) return undefined;
-      return (lastPage as any).offset + 50;
+      return lastPage.offset + 50;
     },
-    enabled: viewMode === "search" && !!token && searchQuery.trim().length > 0,
+    enabled: viewMode === "search" && !!token && searchQuery.trim().length > 0 && hasLocalData,
   });
 
   // Set up intersection observer for infinite scrolling
@@ -166,9 +203,19 @@ function App() {
   }, [memosData, searchData, viewMode]);
 
   const exportMemos = async () => {
-    // For export, we need to fetch ALL memos, not just the currently loaded ones
+    // For export, fetch all memos from local database
     try {
-      const allMemos = await invoke<Memo[]>("get_memos", { token });
+      if (!hasLocalData) {
+        alert("No local data to export. Please sync first.");
+        return;
+      }
+      
+      const allMemos = await invoke<Memo[]>("get_memos_from_db", {
+        orderBy,
+        orderDir,
+        offset: 0,
+        limit: 999999, // Get all
+      });
       
       if (allMemos.length === 0) {
         alert("No memos to export");
@@ -261,6 +308,11 @@ function App() {
     setError(null);
   };
 
+  const handleSyncComplete = () => {
+    checkLocalData();
+    queryClient.invalidateQueries();
+  };
+
   return (
     <div className="app">
       <header className="app-header">
@@ -285,6 +337,13 @@ function App() {
             Settings
           </button>
         </nav>
+        <button
+          className="sync-button-header"
+          onClick={() => setShowSyncModal(true)}
+          title="Data Synchronization"
+        >
+          🔄 Sync
+        </button>
       </header>
 
       <main className="app-main">
@@ -334,6 +393,25 @@ function App() {
             ) : (
               <>
                 <div className="toolbar">
+                  <div className="sort-controls">
+                    <label>Sort by:</label>
+                    <select
+                      value={orderBy}
+                      onChange={(e) => setOrderBy(e.target.value as OrderBy)}
+                      className="sort-select"
+                    >
+                      <option value="created_at">Created Date</option>
+                      <option value="updated_at">Updated Date</option>
+                    </select>
+                    <select
+                      value={orderDir}
+                      onChange={(e) => setOrderDir(e.target.value as OrderDir)}
+                      className="sort-select"
+                    >
+                      <option value="desc">Newest First</option>
+                      <option value="asc">Oldest First</option>
+                    </select>
+                  </div>
                   <div className="export-controls">
                     <select
                       value={selectedFormat}
@@ -349,7 +427,7 @@ function App() {
                       disabled={getAllMemos().length === 0}
                       className="export-button"
                     >
-                      Export ({getAllMemos().length} memos)
+                      Export All
                     </button>
                   </div>
                   {isErrorMemos && (
@@ -359,9 +437,24 @@ function App() {
                   )}
                 </div>
                 
-                {getAllMemos().length > 0 && (
+                {!hasLocalData && (
+                  <div className="sync-prompt">
+                    <p>No local data found. Please sync your memos first.</p>
+                    <button 
+                      className="sync-button-inline"
+                      onClick={() => setShowSyncModal(true)}
+                    >
+                      Open Sync Manager
+                    </button>
+                  </div>
+                )}
+                
+                {hasLocalData && getAllMemos().length > 0 && (
                   <div className="memo-stats">
-                    Loaded: {getAllMemos().length} memos
+                    Showing: {getAllMemos().length} memos (sorted by {orderBy === "created_at" ? "creation date" : "update date"})
+                    {!hasNextMemos && (
+                      <span className="memo-stats-note"> • All loaded</span>
+                    )}
                   </div>
                 )}
 
@@ -376,7 +469,7 @@ function App() {
                     </div>
                   )}
                   
-                  {!isLoadingMemos && !isErrorMemos && getAllMemos().length === 0 && (
+                  {!isLoadingMemos && !isErrorMemos && hasLocalData && getAllMemos().length === 0 && (
                     <div className="empty-state">
                       No memos found.
                     </div>
@@ -410,8 +503,30 @@ function App() {
                 className="search-input"
               />
             </div>
+
+            {searchQuery.trim() && (
+              <div className="sort-controls search-sort">
+                <label>Sort by:</label>
+                <select
+                  value={orderBy}
+                  onChange={(e) => setOrderBy(e.target.value as OrderBy)}
+                  className="sort-select"
+                >
+                  <option value="created_at">Created Date</option>
+                  <option value="updated_at">Updated Date</option>
+                </select>
+                <select
+                  value={orderDir}
+                  onChange={(e) => setOrderDir(e.target.value as OrderDir)}
+                  className="sort-select"
+                >
+                  <option value="desc">Newest First</option>
+                  <option value="asc">Oldest First</option>
+                </select>
+              </div>
+            )}
             
-            {searchQuery.trim() && getAllMemos().length > 0 && (
+            {searchQuery.trim() && hasLocalData && getAllMemos().length > 0 && (
               <div className="memo-stats">
                 Found: {getAllMemos().length} memos
               </div>
@@ -428,9 +543,21 @@ function App() {
                 </div>
               )}
               
-              {!isLoadingSearch && searchQuery.trim() && getAllMemos().length === 0 && (
+              {!isLoadingSearch && searchQuery.trim() && hasLocalData && getAllMemos().length === 0 && (
                 <div className="empty-state">
                   No memos found matching "{searchQuery}"
+                </div>
+              )}
+              
+              {!hasLocalData && searchQuery.trim() && (
+                <div className="sync-prompt">
+                  <p>No local data found. Please sync your memos first.</p>
+                  <button 
+                    className="sync-button-inline"
+                    onClick={() => setShowSyncModal(true)}
+                  >
+                    Open Sync Manager
+                  </button>
                 </div>
               )}
               
@@ -449,6 +576,13 @@ function App() {
           </div>
         )}
       </main>
+      
+      <SyncModal
+        isOpen={showSyncModal}
+        onClose={() => setShowSyncModal(false)}
+        token={token}
+        onSyncComplete={handleSyncComplete}
+      />
     </div>
   );
 }

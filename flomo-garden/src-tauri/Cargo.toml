@@ -31,4 +31,5 @@ scraper = "0.17"
 tauri-plugin-store = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+rusqlite = { version = "0.30", features = ["bundled", "chrono"] }
 

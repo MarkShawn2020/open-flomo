@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    flmo_garden_lib::run()
+    flomo_garden_lib::run()
 }

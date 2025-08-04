@@ -8,7 +8,10 @@ import sys
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from . import Flomo, Parser
+try:
+    from . import Flomo, Parser
+except ImportError:
+    from __init__ import Flomo, Parser
 
 
 class FlomoConfig:

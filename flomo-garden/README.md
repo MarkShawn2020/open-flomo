@@ -8,12 +8,15 @@ A beautiful desktop application for managing your Flomo (浮墨) notes, built wi
 - 📝 View and browse all your Flomo memos
 - 🔍 Search through your memos
 - 📤 Export memos in multiple formats (JSON, Markdown, Table)
-- 💾 Local storage for configuration
-- 🎨 Clean and modern UI
+- 💾 Local SQLite database for offline access
+- 🔄 Sync memos from Flomo API to local storage
+- 🎨 Clean and modern UI with two-column export preview
 - ♾️ Infinite scrolling with React Query for optimal performance
 - ⚡ Fast pagination - loads memos as you scroll
 - 🔄 Sort by creation date or update date (newest/oldest first)
-- 📊 Loads 200 memos initially for accurate sorting
+- 📅 Customizable date formats with presets
+- 🔍 Code Inspector support for development (Option+Shift/Alt+Shift)
+- 📊 Batch operations and progress tracking
 
 ## Installation
 
@@ -73,12 +76,21 @@ The built application will be in `src-tauri/target/release/bundle/`.
 - **Memos Tab**: View your memos with sorting options, infinite scroll, and export functionality
 - **Search Tab**: Search through your memos by content or tags with sorting options
 - **Settings Tab**: Configure your authentication token
+- **Sync Data**: Synchronize your memos from Flomo API to local database
 
-### Export Formats
+### Export Features
 
+#### Export Formats
 - **Markdown**: Human-readable format with formatting preserved
 - **JSON**: Complete data export for backup or processing
 - **Table**: Simple text table format
+
+#### Export Options
+- **Date Formats**: Choose from presets (yyyy-MM-dd, US format, Chinese format, etc.) or custom format
+- **URL Display**: Full URL, ID only, or hide completely
+- **Minimal Mode**: One-line format for AI consumption (Markdown only)
+- **Compact JSON**: Minified JSON output option
+- **Preview**: Live preview of export format before saving
 
 ## Technical Details
 
@@ -106,13 +118,18 @@ The built application will be in `src-tauri/target/release/bundle/`.
 flomo-garden/
 ├── src/                    # React frontend
 │   ├── App.tsx            # Main application component
+│   ├── ExportPreview.tsx  # Export preview dialog
+│   ├── SyncModal.tsx      # Data sync modal
 │   ├── App.css            # Application styles
 │   └── main.tsx           # Entry point
 ├── src-tauri/             # Rust backend
 │   ├── src/
 │   │   ├── lib.rs         # API integration and commands
+│   │   ├── db.rs          # SQLite database operations
 │   │   └── main.rs        # Application entry
+│   ├── capabilities/      # Tauri permissions
 │   └── tauri.conf.json    # Tauri configuration
+├── vite.config.ts         # Vite configuration with code-inspector
 └── package.json           # Frontend dependencies
 ```
 
@@ -128,6 +145,16 @@ pnpm preview      # Preview production build
 pnpm tauri dev    # Run app in development
 pnpm tauri build  # Build for production
 ```
+
+### Development Features
+
+#### Code Inspector
+When running in development mode (`pnpm tauri dev`), you can use the code inspector feature:
+- Hold `Option + Shift` (Mac) or `Alt + Shift` (Windows/Linux)
+- Hover over any element to see its information
+- Click to open the source code in your editor
+
+This feature helps you quickly navigate from UI elements to their source code.
 
 ## License
 

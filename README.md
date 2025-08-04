@@ -16,6 +16,8 @@ flomo-cli 是一个非官方的 [flomo](https://flomoapp.com)（浮墨）Python 
 
 > 💡 **提示**: 本项目基于 [Benature/flomo](https://github.com/Benature/flomo) 二次开发，增强了 CLI 功能并优化了 API 设计。
 
+> 🖥️ **新增**: [Flomo Garden](#flomo-garden) - 基于 Tauri 的跨平台桌面应用，提供美观的图形界面！
+
 ## ✨ 核心特性
 
 - 🤖 **AI 分析友好** - 专为导出数据给大模型分析而优化，支持极简格式输出
@@ -254,6 +256,37 @@ make all        # 完整构建流程
 make upload     # 上传到 PyPI
 ```
 
+## 🖥️ Flomo Garden 桌面应用
+
+<a name="flomo-garden"></a>
+
+在 `flomo-garden/` 目录中，我们提供了一个功能强大的跨平台桌面应用程序。
+
+### 主要特性
+
+- 🎨 **美观的界面** - 现代化的 UI 设计，支持深色模式
+- 💾 **本地数据库** - SQLite 存储，支持离线访问
+- 🔄 **数据同步** - 从 Flomo API 同步到本地存储
+- 📤 **高级导出** - 双栏预览，支持自定义日期格式
+- 🔍 **代码检查器** - 开发模式下按住 Option+Shift（Mac）或 Alt+Shift（Windows）点击元素跳转到源代码
+- ⚡ **高性能** - 无限滚动，按需加载
+
+### 快速开始
+
+```bash
+cd flomo-garden
+pnpm install
+pnpm tauri dev
+```
+
+### 构建生产版本
+
+```bash
+pnpm tauri build
+```
+
+详细信息请查看 [flomo-garden/README.md](flomo-garden/README.md)。
+
 ## 🤝 贡献指南
 
 欢迎贡献代码、报告问题或提出建议！
@@ -293,6 +326,8 @@ flomo-cli is an unofficial Python API library and command-line tool for [flomo](
 
 > 💡 **Note**: This project is based on [Benature/flomo](https://github.com/Benature/flomo) with enhanced CLI features and optimized API design.
 
+> 🖥️ **New**: [Flomo Garden](#flomo-garden-en) - A cross-platform desktop application built with Tauri, providing a beautiful GUI!
+
 ## ✨ Key Features
 
 - 🤖 **AI-Friendly Export** - Optimized for feeding data to LLMs with minimal format support
@@ -313,6 +348,37 @@ make all
 ```
 
 **Requirements**: Python 3.7+
+
+## 🖥️ Flomo Garden Desktop App
+
+<a name="flomo-garden-en"></a>
+
+In the `flomo-garden/` directory, we provide a powerful cross-platform desktop application.
+
+### Key Features
+
+- 🎨 **Beautiful UI** - Modern design with dark mode support
+- 💾 **Local Database** - SQLite storage for offline access
+- 🔄 **Data Sync** - Sync from Flomo API to local storage
+- 📤 **Advanced Export** - Two-column preview with custom date formats
+- 🔍 **Code Inspector** - Hold Option+Shift (Mac) or Alt+Shift (Windows) to click elements and jump to source
+- ⚡ **High Performance** - Infinite scroll with on-demand loading
+
+### Quick Start
+
+```bash
+cd flomo-garden
+pnpm install
+pnpm tauri dev
+```
+
+### Build for Production
+
+```bash
+pnpm tauri build
+```
+
+See [flomo-garden/README.md](flomo-garden/README.md) for more details.
 
 ---
 

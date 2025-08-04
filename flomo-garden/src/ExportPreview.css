@@ -165,6 +165,27 @@
   cursor: pointer;
 }
 
+.format-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #999;
+}
+
+.option-group input[type="text"] {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+}
+
+.option-group input[type="text"]:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
 .export-actions {
   margin-top: 20px;
   display: flex;

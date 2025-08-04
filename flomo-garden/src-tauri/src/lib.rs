@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc, TimeZone};
 use reqwest::header::{HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 use md5;
@@ -9,6 +9,40 @@ use std::sync::Mutex;
 
 mod db;
 use db::Database;
+
+// Helper function to format dates according to the given format string
+fn format_date(date_str: &str, format: &str) -> String {
+    // Parse the date string
+    let parsed = DateTime::parse_from_rfc3339(date_str)
+        .map(|dt| dt.with_timezone(&Utc))
+        .or_else(|_| {
+            NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S")
+                .map(|dt| Utc.from_utc_datetime(&dt))
+        });
+    
+    if let Ok(parsed) = parsed {
+        // Convert common date format patterns to chrono format
+        let chrono_format = format
+            .replace("yyyy", "%Y")
+            .replace("MM", "%m")
+            .replace("dd", "%d")
+            .replace("HH", "%H")
+            .replace("mm", "%M")
+            .replace("ss", "%S")
+            .replace("MMM", "%b");
+        
+        // Handle special formats
+        if format.contains("年") {
+            // Chinese date format
+            return parsed.format("%Y年%m月%d日 %H:%M").to_string();
+        }
+        
+        parsed.format(&chrono_format).to_string()
+    } else {
+        // If parsing fails, return the original string
+        date_str.to_string()
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Memo {
@@ -420,24 +454,29 @@ fn format_memos_table(memos: Vec<Memo>) -> String {
     output
 }
 
+#[derive(Debug, Deserialize)]
+struct JsonFormatArgs {
+    memos: Vec<Memo>,
+    compact: bool,
+    #[serde(rename = "dateFormat")]
+    date_format: String,
+}
+
 #[tauri::command]
-fn format_memos_json_with_options(
-    memos: Vec<Memo>, 
-    compact: bool, 
-    include_metadata: bool
-) -> String {
+fn format_memos_json_with_options(args: JsonFormatArgs) -> String {
+    let JsonFormatArgs { memos, compact, date_format } = args;
     let processed_memos: Vec<serde_json::Value> = memos.iter().enumerate().map(|(index, memo)| {
         let mut obj = serde_json::json!({
             "index": index + 1,
             "content": memo.content,
             "url": memo.url,
             "slug": memo.slug,
+            "tags": memo.tags,
         });
         
-        if include_metadata {
-            obj["created_at"] = serde_json::json!(memo.created_at);
-            obj["updated_at"] = serde_json::json!(memo.updated_at);
-            obj["tags"] = serde_json::json!(memo.tags);
+        if !date_format.is_empty() {
+            obj["created_at"] = serde_json::json!(format_date(&memo.created_at, &date_format));
+            obj["updated_at"] = serde_json::json!(format_date(&memo.updated_at, &date_format));
         }
         
         obj
@@ -450,13 +489,19 @@ fn format_memos_json_with_options(
     }
 }
 
+#[derive(Debug, Deserialize)]
+struct MarkdownFormatArgs {
+    memos: Vec<Memo>,
+    #[serde(rename = "urlMode")]
+    url_mode: String,
+    #[serde(rename = "dateFormat")]
+    date_format: String,
+    minimal: bool,
+}
+
 #[tauri::command]
-fn format_memos_markdown_with_options(
-    memos: Vec<Memo>, 
-    url_mode: String, 
-    include_metadata: bool, 
-    minimal: bool
-) -> String {
+fn format_memos_markdown_with_options(args: MarkdownFormatArgs) -> String {
+    let MarkdownFormatArgs { memos, url_mode, date_format, minimal } = args;
     let mut output = String::new();
     
     if !minimal {
@@ -466,13 +511,22 @@ fn format_memos_markdown_with_options(
     for (index, memo) in memos.iter().enumerate() {
         if minimal {
             // Minimal mode: one line per memo
-            let date = memo.created_at.split(' ').next().unwrap_or(&memo.created_at);
+            let date = if date_format.is_empty() {
+                String::new()
+            } else {
+                format_date(&memo.created_at, &date_format)
+            };
             let content = memo.content.replace('\n', " ");
-            output.push_str(&format!("{}|{}|{}\n", index + 1, date, content));
+            if date.is_empty() {
+                output.push_str(&format!("{}|{}\n", index + 1, content));
+            } else {
+                output.push_str(&format!("{}|{}|{}\n", index + 1, date, content));
+            }
         } else {
             // Normal mode
-            if include_metadata {
-                output.push_str(&format!("## {}. {}\n\n", index + 1, memo.created_at));
+            if !date_format.is_empty() {
+                let formatted_date = format_date(&memo.created_at, &date_format);
+                output.push_str(&format!("## {}. {}\n\n", index + 1, formatted_date));
             } else {
                 output.push_str(&format!("## {}\n\n", index + 1));
             }
@@ -499,6 +553,47 @@ fn format_memos_markdown_with_options(
             
             output.push_str("\n---\n\n");
         }
+    }
+    
+    output
+}
+
+#[derive(Debug, Deserialize)]
+struct TableFormatArgs {
+    memos: Vec<Memo>,
+    #[serde(rename = "dateFormat")]
+    date_format: String,
+}
+
+#[tauri::command]
+fn format_memos_table_with_options(args: TableFormatArgs) -> String {
+    let TableFormatArgs { memos, date_format } = args;
+    let mut output = String::from("序号 | 创建时间          | 内容预览\n");
+    output.push_str(&"-".repeat(50));
+    output.push('\n');
+    
+    for (index, memo) in memos.iter().enumerate() {
+        let content_preview = memo.content
+            .replace('\n', " ")
+            .chars()
+            .take(30)
+            .collect::<String>();
+        
+        let date_str = if date_format.is_empty() {
+            memo.created_at.split(' ').next().unwrap_or(&memo.created_at).to_string()
+        } else {
+            format_date(&memo.created_at, &date_format)
+        };
+        
+        output.push_str(&format!("{:2}   | {:17} | {}\n", 
+            index + 1, 
+            date_str,
+            if content_preview.len() >= 30 {
+                format!("{}...", content_preview)
+            } else {
+                content_preview
+            }
+        ));
     }
     
     output
@@ -563,7 +658,8 @@ pub fn run() {
             format_memos_markdown,
             format_memos_table,
             format_memos_json_with_options,
-            format_memos_markdown_with_options
+            format_memos_markdown_with_options,
+            format_memos_table_with_options
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

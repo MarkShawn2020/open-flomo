@@ -68,3 +68,5 @@ pnpm build
 - The project uses strict TypeScript settings with no unused locals/parameters allowed
 - The Rust library is named `flomo_garden_lib` to avoid Windows naming conflicts
 - Tauri plugin `tauri-plugin-opener` is included for opening external links
+- API authentication uses MD5 hashing for signature generation (matching Flomo's requirements)
+- Debug logging is enabled in development mode - check console output for API troubleshooting

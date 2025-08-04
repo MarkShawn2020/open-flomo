@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "flomo-garden",
-        "width": 800,
-        "height": 600
+        "title": "Flomo Garden",
+        "width": 1200,
+        "height": 800,
+        "resizable": true,
+        "center": true
       }
     ],
     "security": {

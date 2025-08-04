@@ -335,3 +335,16 @@ body {
 .memo-link:hover {
   text-decoration: underline;
 }
+
+/* Infinite Scroll */
+.load-more {
+  padding: 20px;
+  text-align: center;
+  margin-top: 16px;
+}
+
+.loading-trigger {
+  color: #586069;
+  font-size: 14px;
+  opacity: 0.6;
+}

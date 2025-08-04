@@ -1,8 +1,9 @@
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use reqwest::header::{HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 use md5;
 use std::collections::HashMap;
+use tauri::Manager;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Memo {
@@ -56,7 +57,7 @@ impl FlomoClient {
         Self { token, client }
     }
 
-    fn get_params(&self, latest_slug: Option<&str>, latest_updated_at: Option<i64>) -> HashMap<String, String> {
+    pub fn get_params(&self, latest_slug: Option<&str>, latest_updated_at: Option<i64>) -> HashMap<String, String> {
         let mut params = HashMap::new();
         params.insert("limit".to_string(), Self::LIMIT.to_string());
         params.insert("tz".to_string(), "8:0".to_string());
@@ -66,7 +67,6 @@ impl FlomoClient {
         params.insert("platform".to_string(), "mac".to_string());
         params.insert("webp".to_string(), "1".to_string());
         
-        println!("[DEBUG] Base params before pagination: {:?}", params);
 
         if let (Some(slug), Some(updated_at)) = (latest_slug, latest_updated_at) {
             params.insert("latest_slug".to_string(), slug.to_string());
@@ -85,14 +85,9 @@ impl FlomoClient {
         
         let sign_str = format!("{}{}", param_str, Self::SALT);
         
-        // Debug logging
-        println!("[DEBUG] Sorted params: {:?}", sorted_params);
-        println!("[DEBUG] Param string: {}", param_str);
-        println!("[DEBUG] Sign string: {}", sign_str);
         
         let sign = format!("{:x}", md5::compute(sign_str.as_bytes()));
         
-        println!("[DEBUG] Generated MD5 sign: {}", sign);
         
         params.insert("sign".to_string(), sign);
         params
@@ -106,21 +101,15 @@ impl FlomoClient {
         loop {
             let params = self.get_params(latest_slug.as_deref(), latest_updated_at);
             
-            // Debug logging for request details
-            println!("[DEBUG] Request URL: {}", Self::URL_UPDATED);
-            println!("[DEBUG] Authorization token: {}", self.token);
-            println!("[DEBUG] Request params: {:?}", params);
             
             let mut headers = HeaderMap::new();
             headers.insert(
                 "authorization",
                 HeaderValue::from_str(&self.token).map_err(|e| {
-                    println!("[ERROR] Failed to create auth header: {}", e);
-                    e.to_string()
+                        e.to_string()
                 })?,
             );
 
-            println!("[DEBUG] Request headers: {:?}", headers);
 
             let response = self.client
                 .get(Self::URL_UPDATED)
@@ -129,31 +118,23 @@ impl FlomoClient {
                 .send()
                 .await
                 .map_err(|e| {
-                    println!("[ERROR] HTTP request failed: {}", e);
-                    e.to_string()
+                        e.to_string()
                 })?;
 
-            println!("[DEBUG] Response status: {}", response.status());
-            println!("[DEBUG] Response headers: {:?}", response.headers());
             
             // Get response text first for debugging
             let response_text = response.text().await.map_err(|e| {
-                println!("[ERROR] Failed to get response text: {}", e);
                 e.to_string()
             })?;
             
-            println!("[DEBUG] Response body: {}", response_text);
             
             // Parse the response
             let api_response: ApiResponse = serde_json::from_str(&response_text).map_err(|e| {
-                println!("[ERROR] Failed to parse JSON response: {}", e);
                 format!("JSON parse error: {} - Response was: {}", e, response_text)
             })?;
 
-            println!("[DEBUG] Parsed API response code: {}", api_response.code);
 
             if api_response.code != 0 {
-                println!("[ERROR] API returned error code: {}", api_response.code);
                 return Err(format!("API error: code {} - Response: {}", api_response.code, response_text));
             }
 
@@ -201,11 +182,81 @@ fn parse_html_to_text(html: &str) -> String {
     html2text::from_read(html.as_bytes(), 80)
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PagedResponse {
+    memos: Vec<Memo>,
+    has_more: bool,
+    next_slug: Option<String>,
+    next_updated_at: Option<i64>,
+}
+
 // Tauri commands
 #[tauri::command]
 async fn get_memos(token: String) -> Result<Vec<Memo>, String> {
     let client = FlomoClient::new(token);
     client.get_all_memos().await
+}
+
+#[tauri::command]
+async fn get_memos_page(
+    token: String,
+    latest_slug: Option<String>,
+    latest_updated_at: Option<i64>,
+) -> Result<PagedResponse, String> {
+    let client = FlomoClient::new(token);
+    
+    let params = client.get_params(latest_slug.as_deref(), latest_updated_at);
+    
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "authorization",
+        HeaderValue::from_str(&client.token).map_err(|e| e.to_string())?,
+    );
+
+    let response = client.client
+        .get(FlomoClient::URL_UPDATED)
+        .headers(headers)
+        .query(&params)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let response_text = response.text().await.map_err(|e| e.to_string())?;
+    let api_response: ApiResponse = serde_json::from_str(&response_text)
+        .map_err(|e| format!("JSON parse error: {}", e))?;
+
+    if api_response.code != 0 {
+        return Err(format!("API error: code {}", api_response.code));
+    }
+
+    let api_memos = api_response.data.unwrap_or_default();
+    let has_more = api_memos.len() >= FlomoClient::LIMIT;
+    
+    let (next_slug, next_updated_at) = if has_more && !api_memos.is_empty() {
+        let last_memo = &api_memos[api_memos.len() - 1];
+        let updated_at = DateTime::parse_from_rfc3339(&last_memo.updated_at)
+            .ok()
+            .map(|dt| dt.timestamp());
+        (Some(last_memo.slug.clone()), updated_at)
+    } else {
+        (None, None)
+    };
+
+    let memos: Vec<Memo> = api_memos.into_iter().map(|api_memo| Memo {
+        slug: api_memo.slug.clone(),
+        content: parse_html_to_text(&api_memo.content),
+        created_at: api_memo.created_at,
+        updated_at: api_memo.updated_at,
+        tags: api_memo.tags,
+        url: Some(format!("https://v.flomoapp.com/mine/?memo_id={}", api_memo.slug)),
+    }).collect();
+
+    Ok(PagedResponse {
+        memos,
+        has_more,
+        next_slug,
+        next_updated_at,
+    })
 }
 
 #[tauri::command]
@@ -222,6 +273,41 @@ async fn search_memos(token: String, query: String) -> Result<Vec<Memo>, String>
         .collect();
     
     Ok(filtered)
+}
+
+#[tauri::command]
+async fn search_memos_page(
+    token: String,
+    query: String,
+    offset: usize,
+    limit: usize,
+) -> Result<PagedResponse, String> {
+    let client = FlomoClient::new(token);
+    let all_memos = client.get_all_memos().await?;
+    
+    let filtered: Vec<Memo> = all_memos
+        .into_iter()
+        .filter(|memo| {
+            memo.content.to_lowercase().contains(&query.to_lowercase())
+                || memo.tags.iter().any(|tag| tag.to_lowercase().contains(&query.to_lowercase()))
+        })
+        .skip(offset)
+        .take(limit + 1)
+        .collect();
+    
+    let has_more = filtered.len() > limit;
+    let memos = if has_more {
+        filtered.into_iter().take(limit).collect()
+    } else {
+        filtered
+    };
+    
+    Ok(PagedResponse {
+        memos,
+        has_more,
+        next_slug: None,
+        next_updated_at: None,
+    })
 }
 
 #[tauri::command]
@@ -314,7 +400,9 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             get_memos,
+            get_memos_page,
             search_memos,
+            search_memos_page,
             save_config,
             load_config,
             format_memos_json,

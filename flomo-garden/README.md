@@ -10,6 +10,8 @@ A beautiful desktop application for managing your Flomo (浮墨) notes, built wi
 - 📤 Export memos in multiple formats (JSON, Markdown, Table)
 - 💾 Local storage for configuration
 - 🎨 Clean and modern UI
+- ♾️ Infinite scrolling with React Query for optimal performance
+- ⚡ Fast pagination - loads memos as you scroll
 
 ## Installation
 
@@ -91,6 +93,7 @@ The built application will be in `src-tauri/target/release/bundle/`.
 - React for UI components
 - TypeScript for type safety
 - Rust for backend logic and API integration
+- TanStack Query (React Query) for data fetching and infinite scrolling
 - date-fns for date formatting
 
 ## Development

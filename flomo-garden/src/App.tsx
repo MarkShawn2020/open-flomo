@@ -2,10 +2,19 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { RefreshCw, Settings, Search, List, Download } from "lucide-react";
 import { SyncModal } from "./SyncModal";
 import { ExportPreview } from "./ExportPreview";
 import { MemoContent } from "./MemoContent";
-import "./App.css";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
 interface Memo {
   slug: string;
@@ -15,7 +24,6 @@ interface Memo {
   tags: string[];
   url?: string;
 }
-
 
 type ViewMode = "list" | "search" | "settings";
 type OrderBy = "created_at" | "updated_at";
@@ -238,34 +246,42 @@ function App() {
   };
 
   const renderMemo = (memo: Memo, index: number) => (
-    <div key={memo.slug} className="memo-item">
-      <div className="memo-header">
-        <span className="memo-index">#{index + 1}</span>
-        <span className="memo-date">{formatDate(memo.created_at)}</span>
-      </div>
-      <div className="memo-content">
-        <MemoContent content={memo.content} />
-      </div>
-      {memo.tags.length > 0 && (
-        <div className="memo-tags">
-          {memo.tags.map((tag, i) => (
-            <span key={i} className="tag">#{tag}</span>
-          ))}
+    <Card key={memo.slug} className="bg-card hover:bg-popover hover:shadow-xl transition-all duration-300 border-0 shadow-md overflow-hidden group">
+      <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+      <CardHeader className="pb-3 bg-gradient-to-r from-transparent to-muted/20">
+        <div className="flex justify-between items-center text-sm">
+          <span className="font-bold text-primary text-base">#{index + 1}</span>
+          <span className="text-muted-foreground text-xs">{formatDate(memo.created_at)}</span>
         </div>
-      )}
+      </CardHeader>
+      <CardContent className="pb-3 px-6">
+        <div className="prose prose-sm max-w-none">
+          <MemoContent content={memo.content} />
+        </div>
+        {memo.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {memo.tags.map((tag, i) => (
+              <Badge key={i} variant="secondary" className="text-xs px-3 py-1 bg-secondary/50 hover:bg-secondary transition-colors">
+                #{tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+      </CardContent>
       {memo.url && (
-        <div className="memo-footer">
+        <CardFooter className="pt-3 border-t border-border/50 bg-muted/20">
           <a 
             href={memo.url} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="memo-link"
+            className="text-sm text-primary hover:text-primary/80 font-medium flex items-center gap-1 transition-colors"
           >
-            View on Flomo →
+            View on Flomo
+            <span className="transition-transform group-hover:translate-x-0.5">→</span>
           </a>
-        </div>
+        </CardFooter>
       )}
-    </div>
+    </Card>
   );
 
   const handleViewModeChange = (mode: ViewMode) => {
@@ -279,258 +295,298 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Flomo Garden</h1>
-        <nav className="nav-buttons">
-          <button 
-            className={viewMode === "list" ? "active" : ""}
-            onClick={() => handleViewModeChange("list")}
+    <div className="flex flex-col h-screen bg-background">
+      <header className="relative bg-gradient-to-r from-primary via-primary/90 to-[#CC785C] shadow-lg">
+        <div className="absolute inset-0 bg-black/5"></div>
+        <div className="container mx-auto px-4 py-5 flex items-center justify-between relative">
+          <h1 className="text-3xl font-bold text-white tracking-tight">Flomo Garden</h1>
+          <Button
+            variant="secondary"
+            size="default"
+            onClick={() => setShowSyncModal(true)}
+            className="gap-2 shadow-md hover:shadow-lg transition-all"
           >
-            Memos
-          </button>
-          <button 
-            className={viewMode === "search" ? "active" : ""}
-            onClick={() => handleViewModeChange("search")}
-          >
-            Search
-          </button>
-          <button 
-            className={viewMode === "settings" ? "active" : ""}
-            onClick={() => handleViewModeChange("settings")}
-          >
-            Settings
-          </button>
-        </nav>
-        <button
-          className="sync-button-header"
-          onClick={() => setShowSyncModal(true)}
-          title="Data Synchronization"
-        >
-          🔄 Sync
-        </button>
+            <RefreshCw className="h-4 w-4" />
+            Sync Data
+          </Button>
+        </div>
       </header>
 
-      <main className="app-main">
-        {error && (
-          <div className="error-message">
-            {error}
-          </div>
-        )}
-
-        {viewMode === "settings" && (
-          <div className="settings-view">
-            <h2>Configuration</h2>
-            <div className="form-group">
-              <label htmlFor="token">Bearer Token:</label>
-              <input
-                id="token"
-                type="password"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="Enter your Flomo Bearer token"
-                className="token-input"
-              />
-              <button onClick={saveToken} className="save-button">
-                Save Token
-              </button>
-            </div>
-            <div className="help-text">
-              <p>To get your token:</p>
-              <ol>
-                <li>Open Flomo web app</li>
-                <li>Open Developer Tools (F12)</li>
-                <li>Go to Network tab</li>
-                <li>Refresh the page</li>
-                <li>Look for API requests and find the Authorization header</li>
-                <li>Copy the Bearer token value</li>
-              </ol>
+      <main className="flex-1 overflow-hidden">
+        <Tabs value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)} className="h-full">
+          <div className="bg-muted/30 border-b">
+            <div className="container mx-auto px-4 py-3">
+              <TabsList className="grid w-full max-w-md grid-cols-3 mx-auto bg-background shadow-inner p-1">
+                <TabsTrigger value="list" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">
+                  <List className="h-4 w-4" />
+                  <span className="font-medium">Memos</span>
+                </TabsTrigger>
+                <TabsTrigger value="search" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">
+                  <Search className="h-4 w-4" />
+                  <span className="font-medium">Search</span>
+                </TabsTrigger>
+                <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">
+                  <Settings className="h-4 w-4" />
+                  <span className="font-medium">Settings</span>
+                </TabsTrigger>
+              </TabsList>
             </div>
           </div>
-        )}
 
-        {viewMode === "list" && (
-          <div className="list-view">
-            {!token ? (
-              <div className="empty-state">
-                Please configure your token in Settings first.
-              </div>
-            ) : (
-              <>
-                <div className="toolbar">
-                  <div className="sort-controls">
-                    <label>Sort by:</label>
-                    <select
-                      value={orderBy}
-                      onChange={(e) => setOrderBy(e.target.value as OrderBy)}
-                      className="sort-select"
-                    >
-                      <option value="created_at">Created Date</option>
-                      <option value="updated_at">Updated Date</option>
-                    </select>
-                    <select
-                      value={orderDir}
-                      onChange={(e) => setOrderDir(e.target.value as OrderDir)}
-                      className="sort-select"
-                    >
-                      <option value="desc">Newest First</option>
-                      <option value="asc">Oldest First</option>
-                    </select>
-                  </div>
-                  <div className="export-controls">
-                    <button 
-                      onClick={showExportDialog}
-                      disabled={!hasLocalData}
-                      className="export-button"
-                    >
-                      Export All
-                    </button>
-                  </div>
-                  {isErrorMemos && (
-                    <button onClick={() => refetchMemos()} className="fetch-button">
-                      Retry
-                    </button>
-                  )}
+          <ScrollArea className="h-[calc(100vh-8rem)]">
+            <div className="container mx-auto px-4 py-6">
+              {error && (
+                <div className="mb-4 p-4 bg-destructive/10 text-destructive rounded-lg">
+                  {error}
                 </div>
-                
-                {!hasLocalData && (
-                  <div className="sync-prompt">
-                    <p>No local data found. Please sync your memos first.</p>
-                    <button 
-                      className="sync-button-inline"
-                      onClick={() => setShowSyncModal(true)}
-                    >
-                      Open Sync Manager
-                    </button>
-                  </div>
-                )}
-                
-                {hasLocalData && getAllMemos().length > 0 && (
-                  <div className="memo-stats">
-                    Showing: {getAllMemos().length} memos (sorted by {orderBy === "created_at" ? "creation date" : "update date"})
-                    {!hasNextMemos && (
-                      <span className="memo-stats-note"> • All loaded</span>
-                    )}
-                  </div>
-                )}
+              )}
 
-                <div className="memos-container">
-                  {isLoadingMemos && (
-                    <div className="loading">Loading memos...</div>
-                  )}
-                  
-                  {isErrorMemos && (
-                    <div className="error-message">
-                      Failed to load memos: {memosError?.message || "Unknown error"}
+              <TabsContent value="settings" className="space-y-4 mt-0">
+                <Card className="max-w-2xl mx-auto border-0 shadow-lg bg-card">
+                  <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent pb-6">
+                    <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-[#CC785C] bg-clip-text text-transparent">Configuration</h2>
+                    <p className="text-muted-foreground text-sm mt-1">Manage your Flomo connection settings</p>
+                  </CardHeader>
+                  <CardContent className="space-y-6 pt-6">
+                    <div className="space-y-3">
+                      <Label htmlFor="token" className="text-base font-medium">Bearer Token</Label>
+                      <Input
+                        id="token"
+                        type="password"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                        placeholder="Enter your Flomo Bearer token"
+                        className="h-12 text-base border-2 focus:border-primary transition-colors"
+                      />
+                      <Button onClick={saveToken} className="w-full sm:w-auto bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all">
+                        <Settings className="h-4 w-4 mr-2" />
+                        Save Token
+                      </Button>
                     </div>
-                  )}
-                  
-                  {!isLoadingMemos && !isErrorMemos && hasLocalData && getAllMemos().length === 0 && (
-                    <div className="empty-state">
-                      No memos found.
+                    <Card className="bg-muted/50 border-dashed border-2 border-muted-foreground/20">
+                      <CardContent className="pt-6">
+                        <div className="flex items-start gap-3">
+                          <div className="rounded-full bg-primary/10 p-2">
+                            <Settings className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium mb-3">How to get your Bearer token:</p>
+                            <ol className="list-decimal list-inside text-sm space-y-2 text-muted-foreground">
+                              <li>Open Flomo web app in your browser</li>
+                              <li>Open Developer Tools (Press F12)</li>
+                              <li>Navigate to the Network tab</li>
+                              <li>Refresh the page</li>
+                              <li>Look for API requests and find the Authorization header</li>
+                              <li>Copy the Bearer token value</li>
+                            </ol>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="list" className="space-y-4 mt-0">
+                {!token ? (
+                  <Card className="max-w-md mx-auto">
+                    <CardContent className="pt-6 text-center">
+                      <p className="text-muted-foreground">Please configure your token in Settings first.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="orderBy" className="text-sm">Sort by:</Label>
+                        <Select value={orderBy} onValueChange={(v) => setOrderBy(v as OrderBy)}>
+                          <SelectTrigger id="orderBy" className="w-40">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="created_at">Created Date</SelectItem>
+                            <SelectItem value="updated_at">Updated Date</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select value={orderDir} onValueChange={(v) => setOrderDir(v as OrderDir)}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="desc">Newest First</SelectItem>
+                            <SelectItem value="asc">Oldest First</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={showExportDialog}
+                          disabled={!hasLocalData}
+                          variant="secondary"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <Download className="h-4 w-4" />
+                          Export All
+                        </Button>
+                        {isErrorMemos && (
+                          <Button onClick={() => refetchMemos()} size="sm">
+                            Retry
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  
-                  {getAllMemos().map((memo, index) => renderMemo(memo, index))}
-                  
-                  {(hasNextMemos || isFetchingNextMemos) && (
-                    <div ref={loadMoreRef} className="load-more">
-                      {isFetchingNextMemos ? (
-                        <div className="loading">Loading more...</div>
-                      ) : (
-                        <div className="loading-trigger">Scroll for more</div>
+                    
+                    {!hasLocalData && (
+                      <Card className="bg-muted">
+                        <CardContent className="pt-6 text-center space-y-4">
+                          <p className="text-muted-foreground">No local data found. Please sync your memos first.</p>
+                          <Button onClick={() => setShowSyncModal(true)}>
+                            Open Sync Manager
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
+                    {hasLocalData && getAllMemos().length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Showing: {getAllMemos().length} memos (sorted by {orderBy === "created_at" ? "creation date" : "update date"})
+                        {!hasNextMemos && (
+                          <span className="italic"> • All loaded</span>
+                        )}
+                      </p>
+                    )}
+
+                    <div className="grid gap-4">
+                      {isLoadingMemos && (
+                        <div className="text-center py-8 text-muted-foreground">Loading memos...</div>
+                      )}
+                      
+                      {isErrorMemos && (
+                        <Card className="bg-destructive/10">
+                          <CardContent className="pt-6">
+                            <p className="text-destructive">
+                              Failed to load memos: {memosError?.message || "Unknown error"}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {!isLoadingMemos && !isErrorMemos && hasLocalData && getAllMemos().length === 0 && (
+                        <Card>
+                          <CardContent className="pt-6 text-center">
+                            <p className="text-muted-foreground">No memos found.</p>
+                          </CardContent>
+                        </Card>
+                      )}
+                      
+                      {getAllMemos().map((memo, index) => renderMemo(memo, index))}
+                      
+                      {(hasNextMemos || isFetchingNextMemos) && (
+                        <div ref={loadMoreRef} className="text-center py-4">
+                          {isFetchingNextMemos ? (
+                            <div className="text-muted-foreground">Loading more...</div>
+                          ) : (
+                            <div className="text-muted-foreground text-sm opacity-60">Scroll for more</div>
+                          )}
+                        </div>
                       )}
                     </div>
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="search" className="space-y-4 mt-0">
+                <div className="space-y-4">
+                  <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search memos..."
+                    className="max-w-2xl mx-auto"
+                  />
+
+                  {searchQuery.trim() && (
+                    <div className="flex items-center gap-2 max-w-2xl mx-auto">
+                      <Label htmlFor="searchOrderBy" className="text-sm">Sort by:</Label>
+                      <Select value={orderBy} onValueChange={(v) => setOrderBy(v as OrderBy)}>
+                        <SelectTrigger id="searchOrderBy" className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="created_at">Created Date</SelectItem>
+                          <SelectItem value="updated_at">Updated Date</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={orderDir} onValueChange={(v) => setOrderDir(v as OrderDir)}>
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="desc">Newest First</SelectItem>
+                          <SelectItem value="asc">Oldest First</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   )}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {viewMode === "search" && (
-          <div className="search-view">
-            <div className="search-bar">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search memos..."
-                className="search-input"
-              />
-            </div>
-
-            {searchQuery.trim() && (
-              <div className="sort-controls search-sort">
-                <label>Sort by:</label>
-                <select
-                  value={orderBy}
-                  onChange={(e) => setOrderBy(e.target.value as OrderBy)}
-                  className="sort-select"
-                >
-                  <option value="created_at">Created Date</option>
-                  <option value="updated_at">Updated Date</option>
-                </select>
-                <select
-                  value={orderDir}
-                  onChange={(e) => setOrderDir(e.target.value as OrderDir)}
-                  className="sort-select"
-                >
-                  <option value="desc">Newest First</option>
-                  <option value="asc">Oldest First</option>
-                </select>
-              </div>
-            )}
-            
-            {searchQuery.trim() && hasLocalData && getAllMemos().length > 0 && (
-              <div className="memo-stats">
-                Found: {getAllMemos().length} memos
-              </div>
-            )}
-
-            <div className="memos-container">
-              {isLoadingSearch && (
-                <div className="loading">Searching...</div>
-              )}
-              
-              {isErrorSearch && (
-                <div className="error-message">
-                  Search failed: {searchError?.message || "Unknown error"}
-                </div>
-              )}
-              
-              {!isLoadingSearch && searchQuery.trim() && hasLocalData && getAllMemos().length === 0 && (
-                <div className="empty-state">
-                  No memos found matching "{searchQuery}"
-                </div>
-              )}
-              
-              {!hasLocalData && searchQuery.trim() && (
-                <div className="sync-prompt">
-                  <p>No local data found. Please sync your memos first.</p>
-                  <button 
-                    className="sync-button-inline"
-                    onClick={() => setShowSyncModal(true)}
-                  >
-                    Open Sync Manager
-                  </button>
-                </div>
-              )}
-              
-              {getAllMemos().map((memo, index) => renderMemo(memo, index))}
-              
-              {(hasNextSearch || isFetchingNextSearch) && (
-                <div ref={loadMoreRef} className="load-more">
-                  {isFetchingNextSearch ? (
-                    <div className="loading">Loading more...</div>
-                  ) : (
-                    <div className="loading-trigger">Scroll for more</div>
+                  
+                  {searchQuery.trim() && hasLocalData && getAllMemos().length > 0 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      Found: {getAllMemos().length} memos
+                    </p>
                   )}
+
+                  <div className="grid gap-4">
+                    {isLoadingSearch && (
+                      <div className="text-center py-8 text-muted-foreground">Searching...</div>
+                    )}
+                    
+                    {isErrorSearch && (
+                      <Card className="bg-destructive/10">
+                        <CardContent className="pt-6">
+                          <p className="text-destructive">
+                            Search failed: {searchError?.message || "Unknown error"}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
+                    {!isLoadingSearch && searchQuery.trim() && hasLocalData && getAllMemos().length === 0 && (
+                      <Card>
+                        <CardContent className="pt-6 text-center">
+                          <p className="text-muted-foreground">No memos found matching "{searchQuery}"</p>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
+                    {!hasLocalData && searchQuery.trim() && (
+                      <Card className="bg-muted">
+                        <CardContent className="pt-6 text-center space-y-4">
+                          <p className="text-muted-foreground">No local data found. Please sync your memos first.</p>
+                          <Button onClick={() => setShowSyncModal(true)}>
+                            Open Sync Manager
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
+                    
+                    {getAllMemos().map((memo, index) => renderMemo(memo, index))}
+                    
+                    {(hasNextSearch || isFetchingNextSearch) && (
+                      <div ref={loadMoreRef} className="text-center py-4">
+                        {isFetchingNextSearch ? (
+                          <div className="text-muted-foreground">Loading more...</div>
+                        ) : (
+                          <div className="text-muted-foreground text-sm opacity-60">Scroll for more</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </TabsContent>
             </div>
-          </div>
-        )}
+          </ScrollArea>
+        </Tabs>
       </main>
       
       <SyncModal

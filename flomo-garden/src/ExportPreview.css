@@ -317,16 +317,16 @@
   border: 1px solid rgba(217, 119, 87, 0.3);
 }
 
-/* Responsive adjustments */
-@media (max-width: 1024px) {
+/* Responsive adjustments - Mobile single column */
+@media (max-width: 768px) {
   .export-body {
     flex-direction: column;
     height: calc(100% - 60px); /* Account for header */
   }
 
   .export-left-column {
-    flex: 0 0 300px;
-    max-height: 300px;
+    flex: 0 0 250px;
+    max-height: 250px;
     border-right: none;
     border-bottom: 1px solid var(--color-header-border);
   }
@@ -337,7 +337,7 @@
   }
 
   .export-options {
-    max-height: 40%;
+    max-height: 35%;
   }
 
   .option-group {
@@ -347,5 +347,36 @@
   .option-group label {
     min-width: 100%;
     margin-bottom: 0.375rem;
+  }
+
+  .export-actions {
+    flex-direction: column;
+  }
+
+  .export-button {
+    width: 100%;
+  }
+
+  .memos-list {
+    padding: var(--spacing-s);
+  }
+
+  .export-options {
+    padding: var(--spacing-s);
+  }
+
+  .preview-content {
+    padding: var(--spacing-s);
+    font-size: 0.75rem;
+  }
+  
+  .export-header h2 {
+    font-size: 1.25rem;
+  }
+  
+  .close-button {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.5rem;
   }
 }

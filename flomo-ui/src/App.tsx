@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { RefreshCw, Settings, Search, List, Download } from "lucide-react";
+import { RefreshCw, Settings, Search, List, Download, Info } from "lucide-react";
 import { SyncModal } from "./SyncModal";
 import { ExportPreview } from "./ExportPreview";
 import { MemoContent } from "./MemoContent";
+import { UpdateDialog } from "./UpdateDialog";
+import { UpdateSettings } from "./UpdateSettings";
+import { useAutoUpdate } from "./hooks/useAutoUpdate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,16 +40,28 @@ function App() {
   const [orderDir, setOrderDir] = useState<OrderDir>("desc");
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [showExportPreview, setShowExportPreview] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [exportMemos, setExportMemos] = useState<Memo[]>([]);
   const [hasLocalData, setHasLocalData] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
+  const { updateAvailable } = useAutoUpdate();
 
   // Load saved token and check for local data on mount
   useEffect(() => {
     loadToken();
     checkLocalData();
+    
+    // Listen for update available event from settings
+    const handleUpdateAvailable = () => {
+      setShowUpdateDialog(true);
+    };
+    
+    window.addEventListener('update-available', handleUpdateAvailable);
+    return () => {
+      window.removeEventListener('update-available', handleUpdateAvailable);
+    };
   }, []);
 
   const loadToken = async () => {
@@ -299,15 +314,29 @@ function App() {
         <div className="absolute inset-0 bg-black/5"></div>
         <div className="container mx-auto px-4 py-5 flex items-center justify-between relative">
           <h1 className="text-3xl font-bold text-white tracking-tight">Flomo Garden</h1>
-          <Button
-            variant="secondary"
-            size="default"
-            onClick={() => setShowSyncModal(true)}
-            className="gap-2 shadow-md hover:shadow-lg transition-all"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Sync Data
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="default"
+              onClick={() => setShowSyncModal(true)}
+              className="gap-2 shadow-md hover:shadow-lg transition-all"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Sync Data
+            </Button>
+            <Button
+              variant="secondary"
+              size="default"
+              onClick={() => setShowUpdateDialog(true)}
+              className="gap-2 shadow-md hover:shadow-lg transition-all relative"
+            >
+              <Info className="h-4 w-4" />
+              Updates
+              {updateAvailable && (
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full animate-pulse" />
+              )}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -384,6 +413,8 @@ function App() {
                     </Card>
                   </CardContent>
                 </Card>
+                
+                <UpdateSettings />
               </TabsContent>
 
               <TabsContent value="list" className="space-y-4 mt-0">
@@ -601,6 +632,11 @@ function App() {
           onClose={() => setShowExportPreview(false)}
         />
       )}
+      
+      <UpdateDialog
+        open={showUpdateDialog}
+        onOpenChange={setShowUpdateDialog}
+      />
     </div>
   );
 }

@@ -11,6 +11,8 @@
     "fs:default",
     "fs:allow-write-text-file",
     "fs:read-all",
-    "fs:write-all"
+    "fs:write-all",
+    "updater:default",
+    "process:default"
   ]
 }

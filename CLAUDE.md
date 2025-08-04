@@ -2,11 +2,33 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Checkpoint 记录
+
+项目: flomo
+时间: 2025-08-04T00:00:00Z
+里程碑: Project restructuring - separated CLI and UI components
+
+### 技术状态
+- 代码质量: 良好
+- 架构健康: 优秀 - 成功将CLI和UI分离成独立模块
+
+### 文档维护
+- [x] README.md: 完整且最新
+- [x] 配置同步: 所有配置文件与代码同步
+
+### 建议行动
+- 为Python CLI添加单元测试
+- 在CONTRIBUTING.md中记录新的项目结构
+- 添加CI/CD管道实现自动化构建
+- 考虑CLI和UI组件的独立版本管理策略
+
+Git提交: d4f7cf5
+
 ## Project Overview
 
 Flomo is an unofficial Python API library and CLI tool for interacting with the Flomo (浮墨) note-taking service. It provides programmatic access to fetch, parse, and export Flomo memos.
 
-This repository also contains **Flomo Garden** (in `/flomo-garden/`), a Tauri-based desktop application built with React and TypeScript that provides a beautiful GUI for managing Flomo notes.
+This repository also contains **Flomo Garden** (in `/flomo-ui/`), a Tauri-based desktop application built with React and TypeScript that provides a beautiful GUI for managing Flomo notes.
 
 ## Development Commands
 
